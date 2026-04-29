@@ -45,7 +45,7 @@ Credenciales por defecto:
 
 - Sube la carpeta completa del proyecto, no solo la carpeta `server`, porque el backend sirve `HTML.html`, `panel-admin-aurora-2026.html` y `assets/` desde la raiz.
 - En el panel del hosting usa como comando de inicio `npm start` o `node server.js`.
-- Si el hosting publica la app dentro de una subruta, por ejemplo `https://tudominio.com/sorteo/`, el boton `Acceso` y las APIs ya se ajustan automaticamente a esa ruta.
+- Si el hosting publica la app dentro de una subruta, por ejemplo `https://tudominio.com/sorteo/`, el boton `Acceso` abre `panel-admin-aurora-2026.html` dentro de esa misma ruta y las APIs se ajustan automaticamente.
 - Configura `ADMIN_USER` y `ADMIN_PASSWORD` en las variables de entorno del hosting para no usar las credenciales por defecto.
 
 ## Preparar GitHub

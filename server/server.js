@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const express = require("express");
+const fs = require("fs");
 const helmet = require("helmet");
 const path = require("path");
 const rateLimit = require("express-rate-limit");
@@ -10,6 +11,11 @@ const app = express();
 app.set("trust proxy", 1);
 
 const ROOT_DIR = path.resolve(__dirname, "..");
+const PUBLIC_DIRS = [
+  process.env.PUBLIC_DIR ? path.resolve(process.env.PUBLIC_DIR) : null,
+  ROOT_DIR,
+  __dirname
+].filter(Boolean);
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(__dirname, "data"));
 const ENTRIES_FILE = "entries.json";
 const ACTIVITY_FILE = "activity.json";
@@ -90,16 +96,11 @@ function stripSingleMountPrefix(req, res, next) {
 }
 
 function servePublicPage(req, res) {
-  res.sendFile(path.join(ROOT_DIR, "HTML.html"));
+  res.sendFile(resolvePublicFile("HTML.html"));
 }
 
 function serveAdminPage(req, res) {
-  res.sendFile(path.join(ROOT_DIR, "panel-admin-aurora-2026.html"));
-}
-
-function redirectToAdmin(req, res) {
-  const publicBasePath = res.locals.publicBasePath || "";
-  res.redirect(301, appendOriginalQuery(req, `${publicBasePath}/admin`));
+  res.sendFile(resolvePublicFile("panel-admin-aurora-2026.html"));
 }
 
 function serveMountedPublicPage(req, res, next) {
@@ -130,7 +131,17 @@ app.use(
   })
 );
 
-app.use("/assets", express.static(path.join(ROOT_DIR, "assets")));
+PUBLIC_DIRS.forEach((publicDir) => {
+  app.use("/assets", express.static(path.join(publicDir, "assets")));
+});
+
+function resolvePublicFile(filename) {
+  const publicFile = PUBLIC_DIRS.map((publicDir) => path.join(publicDir, filename)).find((filePath) =>
+    fs.existsSync(filePath)
+  );
+
+  return publicFile || path.join(ROOT_DIR, filename);
+}
 
 function normalizeName(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -562,7 +573,7 @@ app.get("/HTML.html", servePublicPage);
 
 app.get("/admin", serveAdminPage);
 
-app.get("/panel-admin-aurora-2026.html", redirectToAdmin);
+app.get("/panel-admin-aurora-2026.html", serveAdminPage);
 
 app.get("/health", (req, res) => {
   res.json({ ok: true });
