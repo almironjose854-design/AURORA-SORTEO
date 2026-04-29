@@ -8,16 +8,43 @@
       name="description"
       content="Formulario de registro de clientes de Aurora Inmobiliaria para sorteos y gestion comercial."
     />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="./assets/logo.png" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+
     <link rel="stylesheet" href="./assets/aurora-shared.css" />
     <script src="./assets/aurora-data.js" defer></script>
     <script src="./assets/aurora-public.js" defer></script>
+
+    <!-- Estilo botón oculto -->
+    <style>
+      .admin-access {
+        position: fixed;
+        bottom: 5px;
+        right: 10px;
+        opacity: 0.2;
+        font-size: 12px;
+        z-index: 999;
+      }
+
+      .admin-access a {
+        color: #000;
+        text-decoration: none;
+      }
+
+      .admin-access:hover {
+        opacity: 1;
+      }
+    </style>
   </head>
+
   <body class="page-public">
     <div class="container">
       <header class="topbar topbar-public">
@@ -156,6 +183,10 @@
       <footer class="site-footer">
         Aurora Inmobiliaria | Formulario de registro de clientes.
       </footer>
+    </div>
+
+    <div class="admin-access">
+      <a href="panel-admin-aurora-2026.html">Acceso</a>
     </div>
   </body>
 </html>
