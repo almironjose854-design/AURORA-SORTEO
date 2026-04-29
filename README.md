@@ -22,11 +22,10 @@ Formulario y panel administrativo para registrar participantes de un sorteo con 
 1. Instala dependencias:
 
 ```bash
-cd server
 npm install
 ```
 
-2. Vuelve a la raiz y arranca:
+2. Arranca el servidor:
 
 ```bash
 npm start
@@ -42,10 +41,17 @@ Credenciales por defecto:
 - Usuario: `admin`
 - Contrasena: `admin123`
 
+## Subir a hosting Node.js
+
+- Sube la carpeta completa del proyecto, no solo la carpeta `server`, porque el backend sirve `HTML.html`, `panel-admin-aurora-2026.html` y `assets/` desde la raiz.
+- En el panel del hosting usa como comando de inicio `npm start` o `node server.js`.
+- Si el hosting publica la app dentro de una subruta, por ejemplo `https://tudominio.com/sorteo/`, el boton `Acceso` y las APIs ya se ajustan automaticamente a esa ruta.
+- Configura `ADMIN_USER` y `ADMIN_PASSWORD` en las variables de entorno del hosting para no usar las credenciales por defecto.
+
 ## Preparar GitHub
 
 1. Sube el proyecto al repositorio.
-2. No subas `server/node_modules` porque ya esta cubierto por `.gitignore`.
+2. No subas `node_modules` ni `server/node_modules` porque ya estan cubiertos por `.gitignore`.
 
 ## Deploy en Fly.io
 

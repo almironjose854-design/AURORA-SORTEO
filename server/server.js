@@ -22,6 +22,22 @@ const SESSION_COOKIE = "aurora_admin_session";
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
 const sessions = new Map();
+const RESERVED_MOUNT_NAMES = new Set([
+  "admin",
+  "api",
+  "assets",
+  "health",
+  "html.html",
+  "panel-admin-aurora-2026.html"
+]);
+const MOUNTABLE_PATH_ROOTS = new Set([
+  "admin",
+  "api",
+  "assets",
+  "health",
+  "html.html",
+  "panel-admin-aurora-2026.html"
+]);
 
 app.use(
   helmet({
@@ -29,6 +45,81 @@ app.use(
   })
 );
 app.use(express.json({ limit: "1mb" }));
+
+function appendOriginalQuery(req, targetPath) {
+  const queryIndex = req.originalUrl.indexOf("?");
+  return queryIndex === -1 ? targetPath : `${targetPath}${req.originalUrl.slice(queryIndex)}`;
+}
+
+function normalizePathPart(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isMountCandidate(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return false;
+  const normalized = normalizePathPart(value);
+  return /^[a-z0-9_-]+$/i.test(raw) && !RESERVED_MOUNT_NAMES.has(normalized);
+}
+
+function redirectAdminTrailingSlash(req, res, next) {
+  if (!req.path.toLowerCase().endsWith("/admin/")) {
+    next();
+    return;
+  }
+
+  res.redirect(308, appendOriginalQuery(req, req.path.slice(0, -1)));
+}
+
+function stripSingleMountPrefix(req, res, next) {
+  const pathWithoutQuery = req.url.split("?")[0];
+  const pathParts = pathWithoutQuery.split("/").filter(Boolean);
+  const [mountName, routeRoot] = pathParts;
+
+  if (
+    pathParts.length >= 2 &&
+    isMountCandidate(mountName) &&
+    MOUNTABLE_PATH_ROOTS.has(normalizePathPart(routeRoot))
+  ) {
+    const mountPrefix = `/${mountName}`;
+    req.url = req.url.slice(mountPrefix.length) || "/";
+    res.locals.publicBasePath = mountPrefix;
+  }
+
+  next();
+}
+
+function servePublicPage(req, res) {
+  res.sendFile(path.join(ROOT_DIR, "HTML.html"));
+}
+
+function serveAdminPage(req, res) {
+  res.sendFile(path.join(ROOT_DIR, "panel-admin-aurora-2026.html"));
+}
+
+function redirectToAdmin(req, res) {
+  const publicBasePath = res.locals.publicBasePath || "";
+  res.redirect(301, appendOriginalQuery(req, `${publicBasePath}/admin`));
+}
+
+function serveMountedPublicPage(req, res, next) {
+  const mountName = req.params.mount;
+
+  if (!isMountCandidate(mountName)) {
+    next();
+    return;
+  }
+
+  if (!req.path.endsWith("/")) {
+    res.redirect(308, appendOriginalQuery(req, `${req.path}/`));
+    return;
+  }
+
+  servePublicPage(req, res);
+}
+
+app.use(redirectAdminTrailingSlash);
+app.use(stripSingleMountPrefix);
 app.use(
   "/api",
   rateLimit({
@@ -465,17 +556,20 @@ app.delete("/api/admin/entries/:id", requireAdmin, async (req, res) => {
   res.json({ success: true });
 });
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(ROOT_DIR, "HTML.html"));
-});
+app.get("/", servePublicPage);
 
-app.get("/admin", (req, res) => {
-  res.sendFile(path.join(ROOT_DIR, "panel-admin-aurora-2026.html"));
-});
+app.get("/HTML.html", servePublicPage);
+
+app.get("/admin", serveAdminPage);
+
+app.get("/panel-admin-aurora-2026.html", redirectToAdmin);
 
 app.get("/health", (req, res) => {
   res.json({ ok: true });
 });
+
+app.get("/:mount/", serveMountedPublicPage);
+app.get("/:mount", serveMountedPublicPage);
 
 app.use((req, res) => {
   res.status(404).json({ message: "Ruta no encontrada." });

@@ -3,11 +3,17 @@
     ? new URL(document.currentScript.src, window.location.href)
     : new URL(window.location.href);
   const assetsBaseUrl = new URL("./", currentScriptUrl);
+  const appBaseUrl = new URL("../", assetsBaseUrl);
 
   const DEFAULT_LOGO = new URL("aurora55logo.webp", assetsBaseUrl).href;
 
+  function toAppUrl(path = "") {
+    const cleanPath = String(path || "").replace(/^\/+/, "");
+    return new URL(cleanPath, appBaseUrl).href;
+  }
+
   async function requestJson(url, options = {}) {
-    const response = await fetch(url, {
+    const response = await fetch(toAppUrl(url), {
       credentials: "same-origin",
       ...options,
       headers: {
@@ -39,42 +45,42 @@
 
   const api = {
     getPublicConfig() {
-      return requestJson("/api/public/config");
+      return requestJson("api/public/config");
     },
     checkEntryCi(ci) {
-      return requestJson(`/api/public/entries/check?ci=${encodeURIComponent(ci)}`);
+      return requestJson(`api/public/entries/check?ci=${encodeURIComponent(ci)}`);
     },
     submitPublicEntry(payload) {
-      return requestJson("/api/public/entries", {
+      return requestJson("api/public/entries", {
         method: "POST",
         body: JSON.stringify(payload)
       });
     },
     getAdminSession() {
-      return requestJson("/api/admin/session");
+      return requestJson("api/admin/session");
     },
     loginAdmin(payload) {
-      return requestJson("/api/admin/login", {
+      return requestJson("api/admin/login", {
         method: "POST",
         body: JSON.stringify(payload)
       });
     },
     logoutAdmin() {
-      return requestJson("/api/admin/logout", {
+      return requestJson("api/admin/logout", {
         method: "POST"
       });
     },
     getAdminDashboard() {
-      return requestJson("/api/admin/dashboard");
+      return requestJson("api/admin/dashboard");
     },
     createDraw(payload) {
-      return requestJson("/api/admin/draws", {
+      return requestJson("api/admin/draws", {
         method: "POST",
         body: JSON.stringify(payload)
       });
     },
     deleteEntry(id) {
-      return requestJson(`/api/admin/entries/${encodeURIComponent(id)}`, {
+      return requestJson(`api/admin/entries/${encodeURIComponent(id)}`, {
         method: "DELETE"
       });
     }
@@ -150,6 +156,12 @@
     });
   }
 
+  function applyAppLinks(root = document) {
+    root.querySelectorAll("[data-app-route]").forEach((link) => {
+      link.href = toAppUrl(link.dataset.appRoute || "");
+    });
+  }
+
   async function getBrandLogoPngDataUrl() {
     try {
       return await new Promise((resolve, reject) => {
@@ -210,6 +222,8 @@
   window.AuroraCore = {
     api,
     DEFAULT_LOGO,
+    APP_BASE_URL: appBaseUrl.href,
+    toAppUrl,
     normalizeName,
     normalizeDigits,
     normalizePhone,
@@ -217,6 +231,7 @@
     validateEntryData,
     formatDateTime,
     applyBrandImages,
+    applyAppLinks,
     getBrandLogoPngDataUrl,
     escapeHtml,
     convertRowsToCsv,

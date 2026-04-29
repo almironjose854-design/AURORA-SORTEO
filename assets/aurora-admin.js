@@ -60,6 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   core.applyBrandImages();
+  core.applyAppLinks();
   bindEvents();
   bootstrap();
 

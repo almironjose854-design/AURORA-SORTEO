@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   core.applyBrandImages();
+  core.applyAppLinks();
   elements.fullName.focus();
 
   elements.form.addEventListener("submit", handleSubmit);
