@@ -211,11 +211,37 @@ function validateEntryData(entry, existingEntries) {
     return { valid: false, field: "consent", message: "Debes autorizar el uso de datos para continuar." };
   }
 
-  if (existingEntries.some((item) => item.ci === entry.ci)) {
+  const duplicate = findDuplicateEntry(entry, existingEntries);
+  if (duplicate) return duplicate;
+
+  return { valid: true };
+}
+
+function findDuplicateEntry(entry, existingEntries = []) {
+  const entries = Array.isArray(existingEntries) ? existingEntries : [];
+
+  if (entry.ci && entries.some((item) => normalizeDigits(item.ci) === entry.ci)) {
     return { valid: false, field: "ci", message: `La cedula ${entry.ci} ya fue registrada.` };
   }
 
-  return { valid: true };
+  if (entry.phone && entries.some((item) => normalizePhone(item.phone) === entry.phone)) {
+    return { valid: false, field: "phone", message: `El numero de celular ${entry.phone} ya fue registrado.` };
+  }
+
+  if (entry.email && entries.some((item) => normalizeEmail(item.email) === entry.email)) {
+    return { valid: false, field: "email", message: `El correo ${entry.email} ya fue registrado.` };
+  }
+
+  return null;
+}
+
+let entryWriteQueue = Promise.resolve();
+
+function withEntryWriteLock(task) {
+  const runTask = () => task();
+  const queuedTask = entryWriteQueue.then(runTask, runTask);
+  entryWriteQueue = queuedTask.catch(() => {});
+  return queuedTask;
 }
 
 async function readEntries() {
@@ -426,41 +452,52 @@ app.get("/api/public/config", async (req, res) => {
 });
 
 app.get("/api/public/entries/check", async (req, res) => {
-  const ci = normalizeDigits(req.query.ci);
+  const candidate = {
+    ci: normalizeDigits(req.query.ci),
+    phone: normalizePhone(req.query.phone),
+    email: normalizeEmail(req.query.email)
+  };
   const entries = await readEntries();
-  res.json({ exists: Boolean(ci) && entries.some((entry) => entry.ci === ci) });
+  const duplicate = findDuplicateEntry(candidate, entries);
+  res.json({
+    exists: Boolean(duplicate),
+    field: duplicate?.field || null,
+    message: duplicate?.message || null
+  });
 });
 
 app.post("/api/public/entries", async (req, res) => {
-  const existingEntries = await readEntries();
-  const candidate = buildEntry(req.body || {});
-  candidate.companyWebsite = String(req.body?.companyWebsite || "");
+  await withEntryWriteLock(async () => {
+    const existingEntries = await readEntries();
+    const candidate = buildEntry(req.body || {});
+    candidate.companyWebsite = String(req.body?.companyWebsite || "");
 
-  const validation = validateEntryData(candidate, existingEntries);
-  if (!validation.valid) {
-    res.status(400).json(validation);
-    return;
-  }
+    const validation = validateEntryData(candidate, existingEntries);
+    if (!validation.valid) {
+      res.status(400).json(validation);
+      return;
+    }
 
-  existingEntries.unshift({
-    id: candidate.id,
-    fullName: candidate.fullName,
-    ci: candidate.ci,
-    phone: candidate.phone,
-    email: candidate.email,
-    hasLot: candidate.hasLot,
-    consent: candidate.consent,
-    source: candidate.source,
-    createdAt: candidate.createdAt
-  });
+    existingEntries.unshift({
+      id: candidate.id,
+      fullName: candidate.fullName,
+      ci: candidate.ci,
+      phone: candidate.phone,
+      email: candidate.email,
+      hasLot: candidate.hasLot,
+      consent: candidate.consent,
+      source: candidate.source,
+      createdAt: candidate.createdAt
+    });
 
-  await writeEntries(existingEntries);
-  await addActivity("entry-created", `${candidate.fullName} (${candidate.ci})`);
+    await writeEntries(existingEntries);
+    await addActivity("entry-created", `${candidate.fullName} (${candidate.ci})`);
 
-  res.status(201).json({
-    success: true,
-    message: "Registro guardado correctamente.",
-    entry: candidate
+    res.status(201).json({
+      success: true,
+      message: "Registro guardado correctamente.",
+      entry: candidate
+    });
   });
 });
 

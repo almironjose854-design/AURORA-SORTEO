@@ -43,12 +43,28 @@
     return payload;
   }
 
+  function buildEntryCheckQuery(criteria = {}) {
+    const params = new URLSearchParams();
+    const fields = ["ci", "phone", "email"];
+
+    fields.forEach((field) => {
+      const value = String(criteria[field] || "").trim();
+      if (value) params.set(field, value);
+    });
+
+    return params.toString();
+  }
+
   const api = {
     getPublicConfig() {
       return requestJson("api/public/config");
     },
+    checkPublicEntry(criteria) {
+      const query = buildEntryCheckQuery(criteria);
+      return requestJson(`api/public/entries/check${query ? `?${query}` : ""}`);
+    },
     checkEntryCi(ci) {
-      return requestJson(`api/public/entries/check?ci=${encodeURIComponent(ci)}`);
+      return api.checkPublicEntry({ ci });
     },
     submitPublicEntry(payload) {
       return requestJson("api/public/entries", {

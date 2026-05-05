@@ -31,7 +31,9 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.phone.value = core.normalizePhone(elements.phone.value);
     clearFieldError("phone");
   });
+  elements.phone.addEventListener("blur", checkExistingPhone);
   elements.email.addEventListener("input", () => clearFieldError("email"));
+  elements.email.addEventListener("blur", checkExistingEmail);
   elements.fullName.addEventListener("input", () => clearFieldError("fullName"));
   elements.consent.addEventListener("change", () => clearFieldError("consent"));
   elements.hasLotYes.addEventListener("change", () => clearFieldError("hasLot"));
@@ -55,6 +57,13 @@ document.addEventListener("DOMContentLoaded", () => {
     setSubmitting(true);
 
     try {
+      const hasDuplicate = await checkExistingEntry(payload, {
+        focusDuplicate: true,
+        showLookupError: false
+      });
+
+      if (hasDuplicate) return;
+
       await core.api.submitPublicEntry(payload);
       elements.form.reset();
       showNotice("Registro guardado correctamente. Tus datos ya quedaron almacenados.", "success");
@@ -75,17 +84,43 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function checkExistingCi() {
-    const ci = core.normalizeDigits(elements.ci.value);
-    if (!ci) return;
+    await checkExistingEntry({ ci: elements.ci.value });
+  }
+
+  async function checkExistingPhone() {
+    await checkExistingEntry({ phone: elements.phone.value });
+  }
+
+  async function checkExistingEmail() {
+    await checkExistingEntry({ email: elements.email.value });
+  }
+
+  async function checkExistingEntry(data, options = {}) {
+    const lookup = {
+      ci: core.normalizeDigits(data.ci),
+      phone: core.normalizePhone(data.phone),
+      email: core.normalizeEmail(data.email)
+    };
+
+    if (!lookup.ci && !lookup.phone && !lookup.email) return false;
 
     try {
-      const response = await core.api.checkEntryCi(ci);
+      const response = await core.api.checkPublicEntry(lookup);
       if (response.exists) {
-        showFieldError("ci", `La cedula ${ci} ya fue registrada.`);
+        const field = response.field || "ci";
+        const message = response.message || "Estos datos ya fueron registrados.";
+        showFieldError(field, message);
+        showNotice(message, "error");
+        if (options.focusDuplicate) focusField(field);
+        return true;
       }
     } catch (error) {
-      showNotice("No se pudo validar la cedula en este momento.", "error");
+      if (options.showLookupError !== false) {
+        showNotice("No se pudo validar si estos datos ya existen en este momento.", "error");
+      }
     }
+
+    return false;
   }
 
   function getFormData() {
