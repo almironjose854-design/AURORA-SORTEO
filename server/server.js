@@ -23,7 +23,7 @@ const DRAWS_FILE = "draws.json";
 
 const PORT = Number(process.env.PORT || 3000);
 const ADMIN_USER = process.env.ADMIN_USER || "admin";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "AUroraMKT2026";
 const SESSION_COOKIE = "aurora_admin_session";
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
